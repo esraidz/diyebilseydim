@@ -7,6 +7,26 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const GFONTS = `@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&family=DM+Sans:ital,wght@0,300;0,400;1,300&display=swap');`;
 
+// typewriter hook — yazar, bekler, siler, tekrar yazar
+function useTypewriter(text, speed = 90) {
+  const [displayed, setDisplayed] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  useEffect(() => {
+    let timeout;
+    if (!deleting && displayed.length < text.length) {
+      timeout = setTimeout(() => setDisplayed(text.slice(0, displayed.length + 1)), speed);
+    } else if (!deleting && displayed.length === text.length) {
+      timeout = setTimeout(() => setDeleting(true), 2800);
+    } else if (deleting && displayed.length > 0) {
+      timeout = setTimeout(() => setDisplayed(text.slice(0, displayed.length - 1)), speed / 2);
+    } else if (deleting && displayed.length === 0) {
+      timeout = setTimeout(() => setDeleting(false), 500);
+    }
+    return () => clearTimeout(timeout);
+  }, [displayed, deleting, text]);
+  return { displayed, typing: !deleting };
+}
+
 // floating 3d-ish emoji objects
 const FLOATERS = [
   { emoji: "🤫", top: "8%",  left: "4%",  size: 52, rot: -15, delay: 0 },
@@ -19,34 +39,26 @@ const FLOATERS = [
 
 function SpeechBubble({ msg, index }) {
   const [hov, setHov] = useState(false);
-  const isLeft = index % 2 === 0;
 
   return (
-    <div
-      style={{
-        display: "flex",
-        justifyContent: isLeft ? "flex-start" : "flex-end",
-        animationDelay: `${index * 0.06}s`,
-        animation: "cardIn 0.5s cubic-bezier(0.16,1,0.3,1) both",
-      }}
-    >
+    <div style={{
+      display: "flex",
+      justifyContent: "flex-start",
+      animationDelay: `${index * 0.06}s`,
+      animation: "cardIn 0.5s cubic-bezier(0.16,1,0.3,1) both",
+    }}>
       <div
         onMouseEnter={() => setHov(true)}
         onMouseLeave={() => setHov(false)}
         style={{
-          maxWidth: "75%",
+          maxWidth: "78%",
           background: "#fff",
-          borderRadius: isLeft
-            ? "24px 24px 24px 4px"
-            : "24px 24px 4px 24px",
+          borderRadius: "24px 24px 24px 4px",
           padding: "16px 20px",
-          boxShadow: hov
-            ? "0 12px 40px rgba(0,0,0,0.18)"
-            : "0 4px 20px rgba(0,0,0,0.12)",
+          boxShadow: hov ? "0 12px 40px rgba(0,0,0,0.18)" : "0 4px 20px rgba(0,0,0,0.12)",
           transform: hov ? "scale(1.02)" : "scale(1)",
           transition: "all 0.2s cubic-bezier(0.16,1,0.3,1)",
           cursor: "default",
-          position: "relative",
         }}
       >
         {msg.to_name && (
@@ -56,7 +68,7 @@ function SpeechBubble({ msg, index }) {
             WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
             marginBottom: 6, letterSpacing: "0.05em", textTransform: "uppercase",
           }}>
-            {msg.to_name}'e
+            {msg.to_name}
           </p>
         )}
         <p style={{
@@ -67,12 +79,12 @@ function SpeechBubble({ msg, index }) {
         }}>
           {msg.content}
         </p>
-        <p style={{
-          fontSize: 10, color: "#bbb", marginTop: 8,
-          fontFamily: "'DM Sans', sans-serif",
-        }}>
-          {new Date(msg.created_at).toLocaleDateString("tr-TR", { day: "numeric", month: "long" })}
-        </p>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8 }}>
+          <p style={{ fontSize: 10, color: "#bbb", fontFamily: "'DM Sans', sans-serif" }}>
+            {new Date(msg.created_at).toLocaleDateString("tr-TR", { day: "numeric", month: "long" })}
+          </p>
+          <span style={{ fontSize: 12, opacity: hov ? 1 : 0, transition: "opacity 0.2s" }}>🤫</span>
+        </div>
       </div>
     </div>
   );
@@ -89,6 +101,7 @@ export default function App() {
   const [sending, setSending]         = useState(false);
   const [submitted, setSubmitted]     = useState(false);
   const sheetRef                      = useRef(null);
+  const typed = useTypewriter("diyebilseydim", 90);
 
   useEffect(() => {
     const s = document.createElement("style");
@@ -137,8 +150,10 @@ export default function App() {
         100%{ transform: scale(1); opacity: 1; }
       }
       @keyframes overlayIn { from { opacity:0; } to { opacity:1; } }
+      @keyframes blink { 0%,100% { opacity:1; } 50% { opacity:0; } }
 
       .fade-up { animation: fadeUp 0.7s cubic-bezier(0.16,1,0.3,1) both; }
+      .cursor { display:inline-block; width:3px; height:1em; background:#fff; margin-left:3px; vertical-align:middle; border-radius:1px; animation: blink 0.75s ease-in-out infinite; }
       .spinner {
         display:inline-block; width:16px; height:16px;
         border:2px solid rgba(255,255,255,0.3);
@@ -250,14 +265,14 @@ export default function App() {
         background: "rgba(244,114,182,0.15)",
         backdropFilter: "blur(20px)",
       }}>
+        <div style={{ width: 80 }} />
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ fontSize: 22 }}>🤫</span>
           <span style={{
-            fontSize: 20, fontWeight: 900, color: "#fff",
+            fontSize: 26, fontWeight: 900, color: "#fff",
             letterSpacing: "-0.03em",
             textShadow: "0 2px 12px rgba(0,0,0,0.15)",
           }}>
-            diyebilseydim
+            {typed.displayed}<span className="cursor" />
           </span>
         </div>
         <button
@@ -281,22 +296,24 @@ export default function App() {
 
         {/* ── HERO ── */}
         <div className="fade-up" style={{ textAlign: "center", padding: "52px 24px 40px" }}>
+          <div style={{ fontSize: 48, marginBottom: 10, filter: "drop-shadow(0 4px 12px rgba(0,0,0,0.2))" }}>🤫</div>
           <h1 style={{
-            fontSize: "clamp(42px,9vw,88px)",
+            fontSize: "clamp(32px,7vw,68px)",
             fontWeight: 900,
             color: "#fff",
             lineHeight: 1.05,
             letterSpacing: "-0.04em",
             textShadow: "0 4px 32px rgba(0,0,0,0.15)",
-            marginBottom: 16,
+            marginBottom: 14,
           }}>
             söyleyemediklerini<br />burada bırak.
           </h1>
           <p style={{
-            fontSize: 15, color: "rgba(255,255,255,0.75)",
+            fontSize: 13, color: "rgba(255,255,255,0.5)",
             fontWeight: 400, fontFamily: "'DM Sans', sans-serif",
+            letterSpacing: "0.12em",
           }}>
-            anonim · kayıt yok · kimse bilmez
+            şşş · anonim · kimse bilmez
           </p>
         </div>
 
