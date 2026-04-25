@@ -1,68 +1,129 @@
 import { useState, useRef } from "react";
-import { CARD_COLORS } from "../constants";
+import { CARD_COLORS, MOODS } from "../constants";
 
-/* ── canvas share image ── */
+/* ── canvas share image — story format 1080×1920 ── */
 function downloadCard(msg) {
-  const color = CARD_COLORS.find((c) => c.id === msg.card_color) || CARD_COLORS[0];
+  const color =
+    CARD_COLORS.find((c) => c.id === msg.card_color) || CARD_COLORS[0];
+  const mood = msg.mood ? MOODS.find((m) => m.id === msg.mood) : null;
   const W = 1080,
-    H = 1350;
+    H = 1920;
   const canvas = document.createElement("canvas");
   canvas.width = W;
   canvas.height = H;
   const ctx = canvas.getContext("2d");
 
+  /* gradient background */
+  const grad = ctx.createLinearGradient(0, 0, W, H);
+  grad.addColorStop(0, color.bg);
+  grad.addColorStop(1, color.ink + "22");
   ctx.fillStyle = color.bg;
   ctx.fillRect(0, 0, W, H);
 
+  /* decorative circles */
+  ctx.globalAlpha = 0.05;
   ctx.fillStyle = color.ink;
-  ctx.fillRect(0, 0, W, 120);
+  ctx.beginPath();
+  ctx.arc(W * 0.8, H * 0.15, 200, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(W * 0.2, H * 0.85, 160, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalAlpha = 1;
 
+  /* header bar */
+  ctx.fillStyle = color.ink;
+  ctx.fillRect(0, 0, W, 140);
   ctx.fillStyle = color.bg;
-  ctx.font = "bold 42px sans-serif";
-  ctx.fillText("şşş 🤫", 48, 78);
+  ctx.font = "bold 48px sans-serif";
+  ctx.fillText("şşş 🤫", 56, 92);
   if (msg.to_name) {
-    ctx.font = "500 38px sans-serif";
-    ctx.fillText(`için: ${msg.to_name}`, 240, 78);
+    ctx.font = "500 42px sans-serif";
+    ctx.fillText(`· ${msg.to_name}`, 260, 92);
   }
-
   ctx.font = "48px serif";
-  ctx.fillText("✉️", W - 100, 80);
+  ctx.fillText("✉️", W - 110, 95);
 
+  /* main text — centered vertically */
   ctx.fillStyle = color.ink;
-  ctx.font = "bold 72px sans-serif";
-  const maxW = W - 96;
-  const lineH = 90;
+  ctx.font = "bold 76px sans-serif";
+  const maxW = W - 120;
+  const lineH = 100;
   const words = msg.content.split(" ");
-  let line = "",
-    y = 240;
+  const lines = [];
+  let currentLine = "";
   for (let i = 0; i < words.length; i++) {
-    const test = line + words[i] + " ";
+    const test = currentLine + words[i] + " ";
     if (ctx.measureText(test).width > maxW && i > 0) {
-      ctx.fillText(line.trim(), 48, y);
-      line = words[i] + " ";
-      y += lineH;
-    } else line = test;
-    if (y > H - 200) {
-      ctx.fillText("...", 48, y);
-      break;
+      lines.push(currentLine.trim());
+      currentLine = words[i] + " ";
+    } else {
+      currentLine = test;
     }
   }
-  ctx.fillText(line.trim(), 48, y);
+  lines.push(currentLine.trim());
+
+  const totalTextH = lines.length * lineH;
+  let startY = (H - totalTextH) / 2 + 40;
+  startY = Math.max(200, Math.min(startY, H - totalTextH - 300));
+
+  for (let i = 0; i < lines.length && startY + i * lineH < H - 300; i++) {
+    ctx.fillText(lines[i], 60, startY + i * lineH);
+  }
+
+  /* mood tag */
+  if (mood) {
+    ctx.fillStyle = color.ink + "44";
+    ctx.font = "500 40px sans-serif";
+    ctx.fillText(`${mood.emoji} ${mood.label}`, 60, H - 260);
+  }
+
+  /* branding footer */
+  ctx.fillStyle = color.ink + "33";
+  ctx.fillRect(0, H - 180, W, 1);
 
   ctx.fillStyle = color.ink + "66";
-  ctx.font = "300 34px sans-serif";
-  ctx.fillText("diyebilseydim.vercel.app", 48, H - 60);
+  ctx.font = "400 36px sans-serif";
+  ctx.fillText("diyebilseydim.vercel.app", 60, H - 110);
 
-  const a = document.createElement("a");
-  a.download = "diyebilseydim.png";
-  a.href = canvas.toDataURL("image/png");
-  a.click();
+  ctx.font = "300 30px sans-serif";
+  ctx.fillStyle = color.ink + "44";
+  ctx.fillText("sen de söyleyemediğini bırak →", 60, H - 60);
+
+  /* download or share */
+  canvas.toBlob(async (blob) => {
+    if (navigator.share && navigator.canShare) {
+      try {
+        const file = new File([blob], "diyebilseydim.png", {
+          type: "image/png",
+        });
+        if (navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            files: [file],
+            title: "diyebilseydim",
+            text: "söyleyemediğini burada bırak 🤫",
+          });
+          return;
+        }
+      } catch {
+        /* user cancelled or share failed — fall through to download */
+      }
+    }
+    /* fallback: download */
+    const a = document.createElement("a");
+    a.download = "diyebilseydim.png";
+    a.href = URL.createObjectURL(blob);
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }, "image/png");
 }
 
 export default function MessageCard({ msg, index }) {
   const [downloading, setDl] = useState(false);
   const cardRef = useRef(null);
-  const color = CARD_COLORS.find((c) => c.id === msg.card_color) || CARD_COLORS[0];
+  const color =
+    CARD_COLORS.find((c) => c.id === msg.card_color) || CARD_COLORS[0];
+  const mood = msg.mood ? MOODS.find((m) => m.id === msg.mood) : null;
 
   /* 3D tilt */
   function handleMouse(e) {
@@ -111,16 +172,25 @@ export default function MessageCard({ msg, index }) {
               setDl(false);
             }, 80);
           }}
-          title="paylaş / indir"
-          aria-label="Kartı indir"
+          title="story olarak paylaş / indir"
+          aria-label="Kartı paylaş"
         >
           {downloading ? (
             <span className="spinner-sm" />
           ) : (
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
-              <polyline points="7 10 12 15 17 10" />
-              <line x1="12" y1="15" x2="12" y2="3" />
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8" />
+              <polyline points="16 6 12 2 8 6" />
+              <line x1="12" y1="2" x2="12" y2="15" />
             </svg>
           )}
         </button>
@@ -129,12 +199,19 @@ export default function MessageCard({ msg, index }) {
       {/* body */}
       <div className="msg-card-body">
         <p className="msg-card-text">{msg.content}</p>
-        <p className="msg-card-date">
-          {new Date(msg.created_at).toLocaleDateString("tr-TR", {
-            day: "numeric",
-            month: "long",
-          })}
-        </p>
+        <div className="msg-card-footer">
+          {mood && (
+            <span className="msg-card-mood">
+              {mood.emoji} {mood.label}
+            </span>
+          )}
+          <p className="msg-card-date">
+            {new Date(msg.created_at).toLocaleDateString("tr-TR", {
+              day: "numeric",
+              month: "long",
+            })}
+          </p>
+        </div>
       </div>
     </div>
   );

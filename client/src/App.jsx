@@ -8,6 +8,8 @@ import Hero from "./components/Hero";
 import SearchBar from "./components/SearchBar";
 import MessageGrid from "./components/MessageGrid";
 import ComposeSheet from "./components/ComposeSheet";
+import RandomReveal from "./components/RandomReveal";
+import StatsModal from "./components/StatsModal";
 import Footer from "./components/Footer";
 
 export default function App() {
@@ -15,6 +17,8 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [compose, setCompose] = useState(false);
+  const [randomOpen, setRandomOpen] = useState(false);
+  const [statsOpen, setStatsOpen] = useState(false);
 
   /* fetch + realtime */
   useEffect(() => {
@@ -24,7 +28,7 @@ export default function App() {
         .from("messages")
         .select("*")
         .order("created_at", { ascending: false })
-        .limit(100);
+        .limit(200);
       if (data) setMessages(data);
       setLoading(false);
     })();
@@ -41,17 +45,25 @@ export default function App() {
     return () => supabase.removeChannel(ch);
   }, []);
 
-  const filtered = messages.filter((m) =>
-    search.trim() === ""
-      ? true
-      : (m.to_name || "").toLowerCase().includes(search.toLowerCase()) ||
-        m.content.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = messages.filter((m) => {
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      return (
+        (m.to_name || "").toLowerCase().includes(q) ||
+        m.content.toLowerCase().includes(q)
+      );
+    }
+    return true;
+  });
 
   return (
     <div className="app-root">
       <ParticleBackground />
-      <Navbar onCompose={() => setCompose(true)} />
+      <Navbar
+        onCompose={() => setCompose(true)}
+        onRandom={() => setRandomOpen(true)}
+        onStats={() => setStatsOpen(true)}
+      />
 
       <main>
         <Hero messageCount={messages.length} />
@@ -68,6 +80,17 @@ export default function App() {
       <ComposeSheet
         open={compose}
         onClose={() => setCompose(false)}
+      />
+
+      <RandomReveal
+        open={randomOpen}
+        onClose={() => setRandomOpen(false)}
+      />
+
+      <StatsModal
+        open={statsOpen}
+        onClose={() => setStatsOpen(false)}
+        messages={messages}
       />
     </div>
   );

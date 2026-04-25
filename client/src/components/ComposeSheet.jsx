@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { supabase } from "../lib/supabase";
 import { CARD_COLORS } from "../constants";
+import MoodSelector from "./MoodSelector";
 
 /* ── emoji rain after send ── */
 function EmojiRain() {
@@ -40,6 +41,7 @@ export default function ComposeSheet({ open, onClose }) {
   const [to, setTo] = useState("");
   const [text, setText] = useState("");
   const [cardColor, setCardColor] = useState(CARD_COLORS[0]);
+  const [mood, setMood] = useState(null);
   const [sending, setSending] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const textRef = useRef(null);
@@ -68,11 +70,13 @@ export default function ComposeSheet({ open, onClose }) {
       card_color: cardColor.id,
       color: cardColor.bg,
       color_name: cardColor.label,
+      mood: mood || null,
     });
     if (!error) {
       setSubmitted(true);
       setText("");
       setTo("");
+      setMood(null);
       setTimeout(() => {
         setSubmitted(false);
         closeSheet();
@@ -151,6 +155,9 @@ export default function ComposeSheet({ open, onClose }) {
                   ))}
                 </div>
               </div>
+
+              {/* mood selector */}
+              <MoodSelector value={mood} onChange={setMood} />
 
               {/* live preview */}
               <div

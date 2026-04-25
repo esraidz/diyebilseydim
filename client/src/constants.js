@@ -11,3 +11,13 @@ export const CARD_COLORS = [
   { id: "ocean",   bg: "#e0f4ff", ink: "#0a2540", label: "okyanus" },
   { id: "sunset",  bg: "#fff0e6", ink: "#3d1a00", label: "günbatımı" },
 ];
+
+export const MOODS = [
+  { id: "ozlem",      emoji: "🥀", label: "özlem" },
+  { id: "pismanlik",  emoji: "😞", label: "pişmanlık" },
+  { id: "ask",        emoji: "💜", label: "aşk" },
+  { id: "kizginlik",  emoji: "🔥", label: "kızgınlık" },
+  { id: "tesekkur",   emoji: "🙏", label: "teşekkür" },
+  { id: "veda",       emoji: "👋", label: "veda" },
+  { id: "itiraf",     emoji: "🤫", label: "itiraf" },
+];
