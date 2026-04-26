@@ -64,14 +64,16 @@ export default function ComposeSheet({ open, onClose }) {
   const handleSend = async () => {
     if (!text.trim() || sending) return;
     setSending(true);
-    const { error } = await supabase.from("messages").insert({
+    const payload = {
       content: text.trim(),
       to_name: to.trim() || null,
       card_color: cardColor.id,
       color: cardColor.bg,
       color_name: cardColor.label,
-      mood: mood || null,
-    });
+      // TODO: mood sütununu Supabase'e ekledikten sonra aşağıdaki satırı aç
+      // mood: mood || null,
+    };
+    const { error } = await supabase.from("messages").insert(payload);
     if (!error) {
       setSubmitted(true);
       setText("");
